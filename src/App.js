@@ -1,24 +1,50 @@
-import logo from './logo.svg';
 import './App.css';
+import Candidate from './components/candidate';
+import { ThemeProvider, createTheme } from '@mui/material/styles';
+import CssBaseline from '@mui/material/CssBaseline';
+import Signin from './components/signin';
+import { login, logout, selectUser } from './features/userSlice';
+import { useDispatch, useSelector } from 'react-redux';
+import db, { auth } from './firebase';
+import { useEffect} from 'react';
+import Interviewer from './components/interviewer';
+const darkTheme = createTheme({
+  palette: {
+    mode: 'dark',
+  },
+});
 
 function App() {
+  const user = useSelector(selectUser);
+  const dispatch = useDispatch();
+  useEffect(() => {
+    const unsubscribe = auth.onAuthStateChanged(userAuth =>{
+      if(userAuth){
+        db.collection('users').doc(userAuth.uid).get().then((value)=>{
+          
+          dispatch(login({
+            uid: userAuth.uid,
+            email: userAuth.email,
+            name: value.data().name,
+            flag: value.data().flag
+          }));
+        })   
+      }else{
+        dispatch(logout());   
+      }
+    });
+    return () =>{
+      unsubscribe();
+    }
+  },[dispatch])
+
   return (
+    <ThemeProvider theme={darkTheme}>
+    <CssBaseline />
     <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
+      {user?user.flag?<Interviewer user= {user}/>:<Candidate user={user}/>:<Signin/>}
     </div>
+    </ThemeProvider>
   );
 }
 
